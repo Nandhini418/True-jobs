@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'package:truejobs/services/login_api_service.dart';
 
 class LogoutPopup extends StatelessWidget {
@@ -156,7 +156,7 @@ class LogoutPopup extends StatelessWidget {
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const UnifiedLoginScreen(),
+                            builder: (context) => const RoleSelectionScreen(),
                           ),
                           (route) => false,
                         );
@@ -188,3 +188,4 @@ class LogoutPopup extends StatelessWidget {
     );
   }
 }
+

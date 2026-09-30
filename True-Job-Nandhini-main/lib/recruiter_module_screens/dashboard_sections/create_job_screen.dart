@@ -37,7 +37,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
   // Controllers
   late TextEditingController _titleController;
-  final TextEditingController _locationController = TextEditingController();
   late TextEditingController _openingsController;
   late TextEditingController _salaryRangeController;
   late TextEditingController _experienceController;
@@ -71,6 +70,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   // Lists and Radios
   List<String> _selectedPerks = [];
   List<String> _selectedSkills = [];
+  List<String> _selectedLocations = [];
 
   String? _walkIn;
   String? _portfolio;
@@ -82,6 +82,10 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
   List<dynamic> _locationTypeOptions = [];
   bool _isLoadingLocationTypes = false;
+
+  List<String> _locationOptions = [];
+  List<dynamic> _rawLocations = [];
+  bool _isLoadingLocations = false;
 
   List<dynamic> _departmentOptions = [];
   bool _isLoadingDepartments = false;
@@ -122,7 +126,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     final job = widget.jobToEdit;
 
     _titleController = TextEditingController(text: job?.title ?? '');
-    _locationController.text = job?.location ?? '';
     _openingsController = TextEditingController(
       text: job != null ? job.openings.toString() : '',
     );
@@ -183,6 +186,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       _departmentType = job.department;
       _selectedPerks = List.from(job.perks);
       _selectedSkills = List.from(job.skills);
+      if (job.location.isNotEmpty) {
+        _selectedLocations = job.location.split(',').map((e) => e.trim()).toList();
+      }
       _walkIn = job.walkIn;
       _portfolio = job.portfolio;
       _resume = job.resume;
@@ -197,6 +203,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       _isLoadingEmploymentTypes = true;
       _isLoadingDepartments = true;
       _isLoadingSkills = true;
+      _isLoadingLocations = true;
     });
 
     if (!RecruiterDropdownCache.isLoaded) {
@@ -209,6 +216,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     final empTypes = RecruiterDropdownCache.employmentTypes;
     final deptTypes = RecruiterDropdownCache.departments;
     final skills = RecruiterDropdownCache.rawSkills;
+    final locations = RecruiterDropdownCache.rawLocations;
 
     if (mounted) {
       setState(() {
@@ -227,6 +235,15 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             .toSet()
             .toList();
         _isLoadingSkills = false;
+        
+        _rawLocations = locations;
+        _locationOptions = locations
+            .map((e) => (e['label'] ?? e['name'])?.toString() ?? '')
+            .where((s) => s.isNotEmpty)
+            .toSet()
+            .toList();
+        _isLoadingLocations = false;
+        
         _departmentOptions = deptTypes;
         _isLoadingDepartments = false;
       });
@@ -236,7 +253,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   @override
   void dispose() {
     _titleController.dispose();
-    _locationController.dispose();
     _openingsController.dispose();
     _salaryRangeController.dispose();
     _experienceController.dispose();
@@ -285,6 +301,23 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     return ids.join(',');
   }
 
+  String _mapLocationsToIds(List<String> selected) {
+    if (selected.isEmpty) return '';
+    List<String> ids = [];
+    for (String loc in selected) {
+      try {
+        final item = _rawLocations.firstWhere(
+          (element) => (element['label'] ?? element['name'])?.toString() == loc,
+        );
+        // Sometimes the id is 'id', sometimes 'value'.
+        ids.add((item['value'] ?? item['id']).toString());
+      } catch (e) {
+        ids.add(loc); // fallback to name if not found in list
+      }
+    }
+    return ids.join(',');
+  }
+
   void _onPublishPressed() async {
     if (_formKey.currentState?.validate() ?? false) {
       showDialog(
@@ -303,7 +336,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         department: _departmentType ?? '3',
         jobType: _employmentType ?? '',
         workLocType: _locationType ?? '',
-        location: _locationController.text.trim(),
+        location: _mapLocationsToIds(_selectedLocations),
         salaryType: _salaryType ?? '',
         salaryRange: _salaryRangeController.text.trim(),
         perksBenefits: _mapPerksToIds(_selectedPerks),
@@ -367,7 +400,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         employmentType: _employmentType ?? '',
         experienceLevel: _experienceController.text.trim(),
         locationType: _locationType ?? '',
-        location: _locationController.text.trim(),
+        location: _selectedLocations.join(', '),
         openings: int.tryParse(_openingsController.text) ?? 1,
         deadline: _deadlineController.text.trim(),
         salaryType: _salaryType ?? '',
@@ -505,7 +538,14 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           onWorkLocTypeChanged: (v) => setState(() => _locationType = v),
           locationTypeOptions: _locationTypeOptions,
           isLoadingLocationTypes: _isLoadingLocationTypes,
-          locationController: _locationController,
+          selectedLocations: _selectedLocations,
+          locationOptions: _locationOptions,
+          isLoadingLocations: _isLoadingLocations,
+          onAddLocation: (loc) {
+            if (!_selectedLocations.contains(loc))
+              setState(() => _selectedLocations.add(loc));
+          },
+          onRemoveLocation: (loc) => setState(() => _selectedLocations.remove(loc)),
           openingsController: _openingsController,
           salaryType: _salaryType,
           onSalaryTypeChanged: (v) => setState(() => _salaryType = v),
@@ -585,7 +625,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       case 5:
         return Step5ReviewJob(
           title: _titleController.text,
-          location: _locationController.text,
+          location: _selectedLocations.join(', '),
           employmentType: _employmentTypeOptions
               .firstWhere(
                 (e) => e['value'].toString() == _employmentType,
@@ -619,7 +659,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   //physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.symmetric(
                     horizontal: 18.w,
-                    vertical: 10.h,
+                    vertical: 30.h,
                   ),
                   child: Column(
                     children: [

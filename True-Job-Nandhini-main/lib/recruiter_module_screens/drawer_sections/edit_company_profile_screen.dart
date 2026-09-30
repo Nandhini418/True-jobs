@@ -141,7 +141,6 @@ class _EditCompanyProfileScreenState extends State<EditCompanyProfileScreen> {
         address.isEmpty ||
         _industryTypeId.isEmpty ||
         about.isEmpty ||
-        size.isEmpty ||
         foundedYear.isEmpty ||
         _companyLogoPath == null ||
         _companyLogoPath!.isEmpty) {
@@ -233,6 +232,7 @@ class _EditCompanyProfileScreenState extends State<EditCompanyProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFFF6F8FD),
       body: SafeArea(
         top: false,
@@ -495,7 +495,7 @@ class _EditCompanyProfileScreenState extends State<EditCompanyProfileScreen> {
         child: DropdownButton<String>(
           isExpanded: true,
           value: _industryTypeId.isNotEmpty ? _industryTypeId : null,
-          hint: Text('Select Industry', style: TextStyle(fontFamily: _fontFamily, fontSize: 13.sp, color: AppColors.dynamicSubtitle)),
+          hint: Text('Select Industry', style: TextStyle(fontFamily: _fontFamily, fontSize: 13.sp, fontWeight: FontWeight.w400, color: AppColors.dynamicSubtitle)),
           items: () {
             final seenValues = <String>{};
             return _industryOptions.where((e) {
@@ -508,7 +508,7 @@ class _EditCompanyProfileScreenState extends State<EditCompanyProfileScreen> {
               final label = (e['label'] ?? e['name'])?.toString() ?? '';
               return DropdownMenuItem<String>(
                 value: val, 
-                child: Text(label, style: TextStyle(fontFamily: _fontFamily, fontSize: 13.sp))
+                child: Text(label, style: TextStyle(fontFamily: _fontFamily, fontSize: 13.sp, fontWeight: FontWeight.w400, color: AppColors.dynamicText))
               );
             }).toList();
           }(),

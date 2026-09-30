@@ -7,7 +7,7 @@ const String kJobFontFamily = 'Poppins';
 
 Widget buildSectionHeader(String title, {String? subtitle}) {
   return Padding(
-    padding: EdgeInsets.only(top: 14.h, bottom: 7.h),
+    padding: EdgeInsets.only(top: 14.h, bottom: 10.h),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -206,6 +206,7 @@ Widget buildApiDropdownField({
       SizedBox(height: 7.h),
       DropdownButtonFormField<String>(
         isExpanded: true,
+        menuMaxHeight: 300.h,
         value: validValue,
         dropdownColor: Colors.white,
         style: TextStyle(
@@ -279,12 +280,13 @@ Widget buildDropdownField({
       SizedBox(height: 7.h),
       DropdownButtonFormField<String>(
         isExpanded: true,
+        menuMaxHeight: 300.h,
         value: validValue,
         style: TextStyle(
           fontFamily: kJobFontFamily,
           fontSize: 13.sp,
           color: AppColors.dynamicText,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w400,
         ),
         icon: Padding(
           padding: EdgeInsets.only(right: 10.w),
@@ -313,7 +315,7 @@ Widget buildDropdownField({
                 fontFamily: kJobFontFamily,
                 fontSize: 13.sp,
                 color: AppColors.dynamicText,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w400,
               ),
             ),
           );

@@ -750,11 +750,13 @@ class _JobsScreenState extends State<JobsScreen> {
                         color: Color(0xFFB2B2B2),
                       ),
                       SizedBox(width: sw * 0.02),
-                      RupeeText(
-                        text: '${job['exp']}  •  ${job['salary']}',
-                        style: TextStyle(
-                          color: subtitleColor,
-                          fontSize: sw * 0.035,
+                      Expanded(
+                        child: RupeeText(
+                          text: '${job['exp']}  •  ${job['salary']}',
+                          style: TextStyle(
+                            color: subtitleColor,
+                            fontSize: sw * 0.035,
+                          ),
                         ),
                       ),
                     ],

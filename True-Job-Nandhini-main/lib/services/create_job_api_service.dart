@@ -73,13 +73,13 @@ class CreateJobApiService {
       }
 
       if (interviewMethod == '1') {
-        if (walkStart != null) body['walk_start'] = walkStart;
-        if (walkEnd != null) body['walk_end'] = walkEnd;
-        if (walkTiming != null) body['walk_timing'] = walkTiming;
-        if (otherInstruct != null) body['other_instruct'] = otherInstruct;
-        if (walkTimeEnd != null) body['walk_time_end'] = walkTimeEnd;
-        if (interviewDate != null) body['interview_date'] = interviewDate;
-        if (walkAddress != null) body['walk_address'] = walkAddress;
+        if (walkStart != null && walkStart.isNotEmpty) body['walk_start'] = walkStart;
+        if (walkEnd != null && walkEnd.isNotEmpty) body['walk_end'] = walkEnd;
+        if (walkTiming != null && walkTiming.isNotEmpty) body['walk_timing'] = walkTiming;
+        if (otherInstruct != null && otherInstruct.isNotEmpty) body['other_instruct'] = otherInstruct;
+        if (walkTimeEnd != null && walkTimeEnd.isNotEmpty) body['walk_time_end'] = walkTimeEnd;
+        if (interviewDate != null && interviewDate.isNotEmpty) body['interview_date'] = interviewDate;
+        if (walkAddress != null && walkAddress.isNotEmpty) body['walk_address'] = walkAddress;
       }
 
       debugPrint('--- Create Job API Request ---');

@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:truejobs/constants/app_colors.dart';
 import 'package:truejobs/widgets/custom_next_button.dart';
 import 'package:truejobs/job_seeker_module/resume_screen.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/smooth_page_route.dart';
 import 'package:flutter/services.dart';
@@ -50,7 +50,7 @@ class _ExperienceScreenState extends State<ExperienceScreen> {
         );
         Navigator.pushAndRemoveUntil(
           context,
-          SmoothPageRoute(child: const UnifiedLoginScreen()),
+          SmoothPageRoute(child: const RoleSelectionScreen()),
           (route) => false,
         );
       }

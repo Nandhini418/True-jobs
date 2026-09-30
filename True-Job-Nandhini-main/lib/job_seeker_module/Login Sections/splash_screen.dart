@@ -1,6 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'package:truejobs/job_seeker_module/home_screen.dart';
 import 'package:truejobs/job_seeker_module/build_profile_screen.dart';
 import 'package:geolocator/geolocator.dart';
@@ -9,12 +8,9 @@ import 'package:truejobs/services/api/api_config.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:truejobs/services/api/version_api.dart';
-import 'package:truejobs/services/api/profile_select_api.dart';
 import '../../constants/app_colors.dart';
-import '../../services/api/apply_job_api.dart';
 import '../../services/api/banner_api.dart';
 import '../../services/api/jobs_api.dart';
-import '../../services/api/job_api.dart';
 import 'package:truejobs/recruiter_module_screens/dashboard_sections/dashboard_holder.dart';
 import 'package:truejobs/recruiter_module_screens/login_sections/basic_detail_screen.dart';
 import 'package:truejobs/recruiter_module_screens/login_sections/company_details_screen.dart';
@@ -27,7 +23,13 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _logoAnimation;
+  late Animation<int> _text1TypingAnimation;
+  late Animation<int> _text2TypingAnimation;
+  late Animation<int> _text3TypingAnimation;
+  late Animation<double> _buttonAnimation;
   bool _needsUpdate = false;
   String _downloadUrl = '';
   Widget? _nextScreen;
@@ -36,7 +38,41 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3500));
+    
+    _logoAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: const Interval(0.0, 0.2, curve: Curves.easeOutBack)),
+    );
+    
+    _text1TypingAnimation = IntTween(begin: 0, end: 'Welcome to'.length).animate(
+      CurvedAnimation(parent: _animationController, curve: const Interval(0.25, 0.45, curve: Curves.linear)),
+    );
+    
+    _text2TypingAnimation = IntTween(begin: 0, end: 'True Jobs'.length).animate(
+      CurvedAnimation(parent: _animationController, curve: const Interval(0.55, 0.75, curve: Curves.linear)),
+    );
+    
+    _text3TypingAnimation = IntTween(begin: 0, end: 'Connecting Talent With Opportunity'.length).animate(
+      CurvedAnimation(parent: _animationController, curve: const Interval(0.80, 0.95, curve: Curves.linear)),
+    );
+    
+    _buttonAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: const Interval(0.95, 1.0, curve: Curves.easeIn)),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _animationController.forward();
+      });
+    });
+
     _initApp();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _launchUpdateUrl() async {
@@ -216,315 +252,7 @@ class _SplashScreenState extends State<SplashScreen> {
       final prefs = await SharedPreferences.getInstance();
       final int? userId = prefs.getInt('user_id');
 
-      if (userId != null) {
-        try {
-          final String suffix = '_$userId';
-
-          // 1. Pre-fetch applied jobs & details
-          final response = await ApplyJobApi.fetchAppliedJobs(userId: userId);
-          if (response['status'] == 'success' || response['error'] == false) {
-            final List<dynamic> appliedList = response['data'] ?? [];
-            final List<String> newAppliedIds = [];
-            final List<Map<String, dynamic>> mappedAppliedJobs = [];
-            final List<String> newAppliedData = [];
-
-            for (final app in appliedList) {
-              final String jobIdStr = (app['job_id'] ?? app['job id'] ?? app['job'] ?? app['id'] ?? '').toString();
-              if (jobIdStr.isNotEmpty) {
-                newAppliedIds.add(jobIdStr);
-              }
-              Map<String, dynamic>? jobData;
-              final int? jobId = int.tryParse(jobIdStr);
-              if (jobId != null && JobsApi.preloadedJobs != null) {
-                final match = JobsApi.preloadedJobs!.firstWhere(
-                  (j) => j['id']?.toString() == jobIdStr,
-                  orElse: () => {},
-                );
-                if (match.isNotEmpty) {
-                  jobData = Map<String, dynamic>.from(match);
-                }
-              }
-              if (jobData == null && jobId != null) {
-                try {
-                  final detailRes = await JobsApi.fetchJobDetails(jobId: jobId);
-                  final parsed = JobsApi.parseJobList(detailRes);
-                  if (parsed.isNotEmpty) {
-                    jobData = parsed.first;
-                  }
-                } catch (_) {}
-              }
-              if (jobData == null && app is Map) {
-                jobData = Map<String, dynamic>.from(app);
-              }
-
-              if (jobData != null) {
-                final mapped = {
-                  'id': jobData['id'] ?? jobIdStr,
-                  'title': jobData['job_title'] ?? jobData['title'] ?? '',
-                  'company': jobData['company_name'] ?? jobData['company'] ?? '',
-                  'location': (jobData['location'] != null && jobData['location'].toString().trim().isNotEmpty)
-                      ? jobData['location'].toString().trim()
-                      : ((jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim().isNotEmpty
-                          ? (jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim()
-                          : 'Coimbatore'),
-                  'exp': jobData['experience'] ?? jobData['exp'] ?? '',
-                  'salary': (jobData['salary_from'] != null && jobData['salary_from'].toString().isNotEmpty)
-                      ? '₹ ${jobData['salary_from']} - ₹ ${jobData['salary_to'] ?? ''} ${jobData['pay_type'] ?? ''}'
-                      : (jobData['salary'] ?? ''),
-                  'desc': jobData['job_description'] ?? jobData['job_desc'] ?? jobData['desc'] ?? '',
-                  'time': jobData['dtime'] ?? '',
-                  'logoText': (jobData['company_name'] ?? jobData['company'] ?? 'J').toString().trim().isNotEmpty
-                      ? (jobData['company_name'] ?? jobData['company']).toString().trim().substring(0, 1).toUpperCase()
-                      : 'J',
-                  'logoBg': Colors.blue.shade50,
-                  'logoColor': Colors.blue.shade700,
-                  'walkInDate': jobData['walk_start'] ?? jobData['walkInDate'],
-                  'walkInTime': jobData['walk_time_end'] ?? jobData['walk_time'] ?? jobData['walkInTime'] ?? '',
-                  'walk_address': jobData['walk_address'] ?? jobData['office_address'] ?? '',
-                  ...jobData,
-                };
-                mappedAppliedJobs.add(mapped);
-
-                final cleanJob = Map<String, dynamic>.from(mapped);
-                if (cleanJob['logoBg'] is Color) {
-                  cleanJob['logoBg'] = (cleanJob['logoBg'] as Color).toARGB32();
-                }
-                if (cleanJob['logoColor'] is Color) {
-                  cleanJob['logoColor'] = (cleanJob['logoColor'] as Color).toARGB32();
-                }
-                newAppliedData.add(json.encode(cleanJob));
-              }
-            }
-
-            await prefs.setStringList('applied_job_ids$suffix', newAppliedIds);
-            await prefs.setStringList('applied_jobs_data$suffix', newAppliedData);
-            await prefs.setBool('applied_job_ids_synced$suffix', true);
-            ApplyJobApi.setAppliedJobIds(newAppliedIds);
-            ApplyJobApi.preloadedAppliedJobs = mappedAppliedJobs;
-          }
-
-          // 2. Pre-fetch registered walkins & details
-          final walkinResponse = await ApplyJobApi.fetchRegisteredWalkins(userId: userId);
-          if (walkinResponse['status'] == 'success' || walkinResponse['error'] == false) {
-            final List<dynamic> walkinList = walkinResponse['data'] ?? [];
-            final List<String> newWalkinIds = [];
-            final List<Map<String, dynamic>> mappedWalkinJobs = [];
-            final List<String> newWalkinData = [];
-
-            for (final item in walkinList) {
-              final String jobIdStr = (item['job_id'] ?? item['job id'] ?? item['job'] ?? item['id'] ?? '').toString();
-              if (jobIdStr.isNotEmpty) {
-                newWalkinIds.add(jobIdStr);
-              }
-              Map<String, dynamic>? jobData;
-              final int? jobId = int.tryParse(jobIdStr);
-              if (jobId != null && JobsApi.preloadedJobs != null) {
-                final match = JobsApi.preloadedJobs!.firstWhere(
-                  (j) => j['id']?.toString() == jobIdStr,
-                  orElse: () => {},
-                );
-                if (match.isNotEmpty) {
-                  jobData = Map<String, dynamic>.from(match);
-                }
-              }
-              if (jobData == null && jobId != null) {
-                try {
-                  final detailRes = await JobsApi.fetchJobDetails(jobId: jobId);
-                  final parsed = JobsApi.parseJobList(detailRes);
-                  if (parsed.isNotEmpty) {
-                    jobData = parsed.first;
-                  }
-                } catch (_) {}
-              }
-              if (jobData == null && item is Map) {
-                jobData = Map<String, dynamic>.from(item);
-              }
-
-              if (jobData != null) {
-                final mapped = {
-                  'id': jobData['id'] ?? jobIdStr,
-                  'title': jobData['job_title'] ?? jobData['title'] ?? '',
-                  'company': jobData['company_name'] ?? jobData['company'] ?? '',
-                  'location': (jobData['location'] != null && jobData['location'].toString().trim().isNotEmpty)
-                      ? jobData['location'].toString().trim()
-                      : ((jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim().isNotEmpty
-                          ? (jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim()
-                          : 'Coimbatore'),
-                  'exp': jobData['experience'] ?? jobData['exp'] ?? '',
-                  'salary': (jobData['salary_from'] != null && jobData['salary_from'].toString().isNotEmpty)
-                      ? '₹ ${jobData['salary_from']} - ₹ ${jobData['salary_to'] ?? ''} ${jobData['pay_type'] ?? ''}'
-                      : (jobData['salary'] ?? ''),
-                  'desc': jobData['job_description'] ?? jobData['job_desc'] ?? jobData['desc'] ?? '',
-                  'time': jobData['dtime'] ?? '',
-                  'logoText': (jobData['company_name'] ?? jobData['company'] ?? 'J').toString().trim().isNotEmpty
-                      ? (jobData['company_name'] ?? jobData['company']).toString().trim().substring(0, 1).toUpperCase()
-                      : 'J',
-                  'logoBg': Colors.blue.shade50,
-                  'logoColor': Colors.blue.shade700,
-                  'walkInDate': jobData['walk_start'] ?? jobData['walkInDate'],
-                  'walkInTime': jobData['walk_time_end'] ?? jobData['walk_time'] ?? jobData['walkInTime'] ?? '',
-                  'walk_address': jobData['walk_address'] ?? jobData['office_address'] ?? '',
-                  ...jobData,
-                };
-                mappedWalkinJobs.add(mapped);
-
-                final cleanJob = Map<String, dynamic>.from(mapped);
-                if (cleanJob['logoBg'] is Color) {
-                  cleanJob['logoBg'] = (cleanJob['logoBg'] as Color).toARGB32();
-                }
-                if (cleanJob['logoColor'] is Color) {
-                  cleanJob['logoColor'] = (cleanJob['logoColor'] as Color).toARGB32();
-                }
-                newWalkinData.add(json.encode(cleanJob));
-              }
-            }
-
-            await prefs.setStringList('registered_walkin_ids$suffix', newWalkinIds);
-            await prefs.setStringList('registered_walkin_jobs_data$suffix', newWalkinData);
-            await prefs.setBool('registered_walkin_ids_synced$suffix', true);
-            ApplyJobApi.setRegisteredWalkinIds(newWalkinIds);
-            ApplyJobApi.preloadedRegisteredWalkins = mappedWalkinJobs;
-          }
-
-          // 3. Pre-fetch saved jobs & details
-          final String token = prefs.getString('token') ?? '';
-          if (token.isNotEmpty) {
-            final savedResponse = await JobApi.fetchSavedJobs(userId: userId, token: token);
-            if (savedResponse['error'] == false) {
-              final List<dynamic> savedList = savedResponse['data'] ?? [];
-              final List<String> newSavedIds = [];
-              final List<String> newSavedData = [];
-
-              for (final item in savedList) {
-                final String jobIdStr = (item['job_id'] ?? item['job id'] ?? item['job'] ?? item['id'] ?? '').toString();
-                if (jobIdStr.isNotEmpty) {
-                  newSavedIds.add(jobIdStr);
-                }
-                Map<String, dynamic>? jobData;
-                final int? jobId = int.tryParse(jobIdStr);
-                
-                // First check preloaded jobs
-                if (jobId != null && JobsApi.preloadedJobs != null) {
-                  final match = JobsApi.preloadedJobs!.firstWhere(
-                    (j) => j['id']?.toString() == jobIdStr,
-                    orElse: () => {},
-                  );
-                  if (match.isNotEmpty) {
-                    jobData = Map<String, dynamic>.from(match);
-                  }
-                }
-                
-                // Next check the item's job_details payload
-                if (jobData == null && item['job_details'] is Map) {
-                   jobData = Map<String, dynamic>.from(item['job_details']);
-                   // Format it similarly to the other endpoints
-                   jobData['id'] = jobIdStr;
-                   jobData['company'] = jobData['company_name'] ?? '';
-                   jobData['title'] = jobData['job_title'] ?? '';
-                   jobData['exp'] = jobData['experience'] ?? '';
-                   if (jobData['salary_range'] != null) {
-                     jobData['salary'] = '₹ ${jobData['salary_range']} Monthly';
-                   }
-                }
-                
-                // Fallback to fetch Job details via API
-                if (jobData == null && jobId != null) {
-                  try {
-                    final detailRes = await JobsApi.fetchJobDetails(jobId: jobId);
-                    final parsed = JobsApi.parseJobList(detailRes);
-                    if (parsed.isNotEmpty) {
-                      jobData = parsed.first;
-                    }
-                  } catch (_) {}
-                }
-
-                if (jobData != null) {
-                  final mapped = {
-                    'id': jobData['id'] ?? jobIdStr,
-                    'title': jobData['job_title'] ?? jobData['title'] ?? '',
-                    'company': jobData['company_name'] ?? jobData['company'] ?? '',
-                    'location': (jobData['location'] != null && jobData['location'].toString().trim().isNotEmpty)
-                        ? jobData['location'].toString().trim()
-                        : ((jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim().isNotEmpty
-                            ? (jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim()
-                            : 'Coimbatore'),
-                    'exp': jobData['experience'] ?? jobData['exp'] ?? '',
-                    'salary': (jobData['salary_from'] != null && jobData['salary_from'].toString().isNotEmpty)
-                        ? '₹ ${jobData['salary_from']} - ₹ ${jobData['salary_to'] ?? ''} ${jobData['pay_type'] ?? ''}'
-                        : (jobData['salary'] ?? ''),
-                    'desc': jobData['job_description'] ?? jobData['job_desc'] ?? jobData['desc'] ?? '',
-                    'time': jobData['dtime'] ?? '',
-                    'logoText': (jobData['company_name'] ?? jobData['company'] ?? 'J').toString().trim().isNotEmpty
-                        ? (jobData['company_name'] ?? jobData['company']).toString().trim().substring(0, 1).toUpperCase()
-                        : 'J',
-                    'logoBg': Colors.blue.shade50,
-                    'logoColor': Colors.blue.shade700,
-                    'walkInDate': jobData['walk_start'] ?? jobData['walkInDate'],
-                    'walkInTime': jobData['walk_time_end'] ?? jobData['walk_time'] ?? jobData['walkInTime'] ?? '',
-                    'walk_address': jobData['walk_address'] ?? jobData['office_address'] ?? '',
-                    ...jobData,
-                  };
-
-                  final cleanJob = Map<String, dynamic>.from(mapped);
-                  if (cleanJob['logoBg'] is Color) {
-                    cleanJob['logoBg'] = (cleanJob['logoBg'] as Color).toARGB32();
-                  }
-                  if (cleanJob['logoColor'] is Color) {
-                    cleanJob['logoColor'] = (cleanJob['logoColor'] as Color).toARGB32();
-                  }
-                  newSavedData.add(json.encode(cleanJob));
-                }
-              }
-
-              await prefs.setStringList('saved_job_ids$suffix', newSavedIds);
-              await prefs.setStringList('saved_jobs_data$suffix', newSavedData);
-            }
-          }
-        } catch (e) {
-          debugPrint('Error pre-fetching applied/walkin jobs on splash: $e');
-        }
-      }
-
-      bool isSessionValid = true;
-      if (userId != null) {
-        try {
-          final profileRes = await ProfileSelectApi.fetchProfile(userId: userId);
-          if (profileRes['status'] == 'error' || profileRes['error'] == true) {
-            final String msg = (profileRes['message'] ?? '').toString().toLowerCase();
-            // Exclude genuine network/downtime errors to allow offline functionality
-            if (!msg.contains('network error') && !msg.contains('server returned status code')) {
-              isSessionValid = false;
-            }
-          }
-        } catch (e) {
-          debugPrint('Error validating session on splash: $e');
-        }
-      }
-
-      if (!isSessionValid && userId != null) {
-        // Clear SharedPreferences session data
-        await prefs.remove('user_id');
-        await prefs.remove('user_role');
-        await prefs.remove('token');
-        await prefs.remove('name');
-        await prefs.remove('mobile');
-        await prefs.remove('email');
-        await prefs.remove('profile_image_url');
-        await prefs.remove('profile_pic_path');
-        await prefs.remove('resume');
-        await prefs.remove('linkedin');
-        await prefs.remove('portfolio');
-        await prefs.remove('is_profile_completed');
-        await prefs.remove('profile_creation_step');
-        await prefs.remove('you_have_experience');
-        await prefs.remove('job_title');
-        await prefs.remove('company_name');
-        await prefs.remove('user_${userId}_you_have_experience');
-        await prefs.remove('user_${userId}_job_title');
-        await prefs.remove('user_${userId}_company_name');
-        await prefs.remove('user_${userId}_experience_id');
-        await prefs.remove('experience_id');
-      }
+      final bool isSessionValid = true;
 
       final bool isProfileCompleted = isSessionValid && (prefs.getBool('is_profile_completed') ?? false);
       final String? userRole = prefs.getString('user_role');
@@ -581,7 +309,7 @@ class _SplashScreenState extends State<SplashScreen> {
           nextScreen = isProfileCompleted ? const HomeScreen() : const BuildProfileScreen();
         }
       } else {
-        nextScreen = const UnifiedLoginScreen();
+        nextScreen = const RoleSelectionScreen();
       }
 
       if (mounted) {
@@ -646,19 +374,17 @@ class _SplashScreenState extends State<SplashScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: screenHeight * 0.15),
-                  Container(
-                    width: screenWidth * 0.22,
-                    height: screenWidth * 0.22,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade200, width: 1),
-                    ),
-                    child: ClipOval(
+                  SizedBox(height: screenHeight * 0.2),
+                  ScaleTransition(
+                    scale: _logoAnimation,
+                    child: FadeTransition(
+                      opacity: _logoAnimation,
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Image.asset(
                           'assets/splash_logo.png',
+                          width: screenWidth * 0.22,
+                          height: screenWidth * 0.22,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                              return Image.asset('assets/header_logo.png', fit: BoxFit.contain);
@@ -668,74 +394,93 @@ class _SplashScreenState extends State<SplashScreen> {
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.04),
-                  Text(
-                    'Welcome to',
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.11,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                      height: 1.1,
-                      letterSpacing: -0.5,
-                    ),
+                  AnimatedBuilder(
+                    animation: _text1TypingAnimation,
+                    builder: (context, child) {
+                      String visibleText = 'Welcome to'.substring(0, _text1TypingAnimation.value);
+                      return Text(
+                        visibleText.isEmpty ? '\u200B' : visibleText,
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.12,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.black,
+                          height: 1.1,
+                        ),
+                      );
+                    },
                   ),
-                  Text(
-                    'True Jobs',
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.11,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.primary,
-                      height: 1.1,
-                      letterSpacing: -0.5,
-                    ),
+                  AnimatedBuilder(
+                    animation: _text2TypingAnimation,
+                    builder: (context, child) {
+                      String visibleText = 'True Jobs'.substring(0, _text2TypingAnimation.value);
+                      return Text(
+                        visibleText.isEmpty ? '\u200B' : visibleText,
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.primary,
+                          height: 1.1,
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Connecting Talent With Opportunity',
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.04,
-                      color: Colors.grey.shade500,
-                    ),
+                  const SizedBox(height: 15),
+                  AnimatedBuilder(
+                    animation: _text3TypingAnimation,
+                    builder: (context, child) {
+                      String visibleText = 'Connecting Talent With Opportunity'.substring(0, _text3TypingAnimation.value);
+                      return Text(
+                        visibleText.isEmpty ? '\u200B' : visibleText,
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.04,
+                          color: Color(0x551B1B1B),
+                        ),
+                      );
+                    },
                   ),
                   const Spacer(),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : () {
-                        if (_nextScreen != null) {
-                           Navigator.of(context).pushReplacement(
-                            PageRouteBuilder(
-                              pageBuilder: (context, animation, secondaryAnimation) => _nextScreen!,
-                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                return FadeTransition(opacity: animation, child: child);
-                              },
-                              transitionDuration: const Duration(milliseconds: 300),
-                              reverseTransitionDuration: const Duration(milliseconds: 300),
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: _isLoading 
-                        ? const SizedBox(
-                            height: 24, 
-                            width: 24, 
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                          )
-                        : const Text(
-                          'Let\'s Get Started',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
+                  FadeTransition(
+                    opacity: _buttonAnimation,
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : () {
+                          if (_nextScreen != null) {
+                             Navigator.of(context).pushReplacement(
+                              PageRouteBuilder(
+                                pageBuilder: (context, animation, secondaryAnimation) => _nextScreen!,
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                  return FadeTransition(opacity: animation, child: child);
+                                },
+                                transitionDuration: const Duration(milliseconds: 300),
+                                reverseTransitionDuration: const Duration(milliseconds: 300),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
                           ),
+                          elevation: 0,
                         ),
+                        child: _isLoading 
+                          ? const SizedBox(
+                              height: 24, 
+                              width: 24, 
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                            )
+                          : const Text(
+                            'Let\'s Get Started',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ),
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.05),

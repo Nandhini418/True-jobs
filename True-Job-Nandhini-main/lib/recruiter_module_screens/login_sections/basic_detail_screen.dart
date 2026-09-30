@@ -1,11 +1,11 @@
-import 'package:truejobs/recruiter_module_screens/login_sections/company_details_screen.dart';
+﻿import 'package:truejobs/recruiter_module_screens/login_sections/company_details_screen.dart';
 //import 'package:truejobs/recruiter_module_screens/login_sections/email_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:truejobs/constants/app_colors.dart';
 import 'package:truejobs/services/basic_detail_api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 
 class EnteredNumberScreen extends StatefulWidget {
   final String phone;
@@ -146,7 +146,7 @@ class _EnteredNumberScreenState extends State<EnteredNumberScreen> {
             if (!context.mounted) return;
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+              MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
               (route) => false,
             );
           },
@@ -470,3 +470,4 @@ class _EnteredNumberScreenState extends State<EnteredNumberScreen> {
     );
   }
 }
+

@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import '../constants/app_colors.dart';
 
-/// Entry point — call this from Settings screen's "Deactivate Account" tap.
+/// Entry point â€” call this from Settings screen's "Deactivate Account" tap.
 void showDeactivateFirstPopup(BuildContext context) {
   showModalBottomSheet(
     context: context,
@@ -58,7 +58,7 @@ void showDeactivateOtpPopup(BuildContext context) {
           Navigator.pop(sheetContext);
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => const UnifiedLoginScreen()),
+            MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
                 (route) => false,
           );
         },

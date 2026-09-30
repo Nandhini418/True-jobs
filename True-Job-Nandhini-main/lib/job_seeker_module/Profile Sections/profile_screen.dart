@@ -5,13 +5,14 @@ import 'dart:ui';
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../services/api/profile_select_api.dart';
 import '../../services/api/profile_update_api.dart';
 import '../../services/api/profile_image_remove_api.dart';
 import '../../services/api/experience_select_api.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import '../Jobs Sections/jobs_screen.dart';
 import '../Walkin Sections/jobs_applied_screen.dart';
 import 'personal_details_screen.dart';
@@ -76,7 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Navigator.pushAndRemoveUntil(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => const UnifiedLoginScreen(),
+            pageBuilder: (context, animation, secondaryAnimation) => const RoleSelectionScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },
@@ -283,7 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               '${stat.modified.day}/${stat.modified.month}/${stat.modified.year}';
           if (mounted) {
             setState(() {
-              _resumeSubtitle = 'Size: $sizeKb KB • Uploaded on $modifiedDate';
+              _resumeSubtitle = 'Size: $sizeKb KB â€¢ Uploaded on $modifiedDate';
             });
           }
         } else {
@@ -906,11 +907,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
-        maxWidth: 400,
-        maxHeight: 400,
-        imageQuality: 30,
+        maxWidth: 1000,
+        maxHeight: 1000,
+        imageQuality: 100,
       );
       if (pickedFile != null) {
+        // Add a small delay to avoid onActivityResult race conditions on Android
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        final CroppedFile? croppedFile = await ImageCropper().cropImage(
+          sourcePath: pickedFile.path,
+          uiSettings: [
+            AndroidUiSettings(
+                toolbarTitle: 'Crop Profile Image',
+                toolbarColor: AppColors.primary,
+                toolbarWidgetColor: Colors.white,
+                initAspectRatio: CropAspectRatioPreset.square,
+                lockAspectRatio: false,
+                cropStyle: CropStyle.circle,
+                aspectRatioPresets: [
+                  CropAspectRatioPreset.square,
+                  CropAspectRatioPreset.ratio3x2,
+                  CropAspectRatioPreset.original,
+                  CropAspectRatioPreset.ratio4x3,
+                  CropAspectRatioPreset.ratio16x9
+                ]),
+            IOSUiSettings(
+              title: 'Crop Profile Image',
+              cropStyle: CropStyle.circle,
+              aspectRatioPresets: [
+                CropAspectRatioPreset.square,
+                CropAspectRatioPreset.ratio3x2,
+                CropAspectRatioPreset.original,
+                CropAspectRatioPreset.ratio4x3,
+                CropAspectRatioPreset.ratio16x9
+              ],
+            ),
+          ],
+        );
+        if (croppedFile == null) return;
+        final String finalImagePath = croppedFile.path;
+
         final prefs = await SharedPreferences.getInstance();
         final int? userId = await _getValidUserId();
         if (userId == null) return;
@@ -965,7 +1002,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           resume: resume,
           linkedin: linkedin,
           portfolio: portfolio,
-          profileImage: File(pickedFile.path),
+          profileImage: File(finalImagePath),
         );
 
         if (response['status'] == 'success' || response['error'] == false) {
@@ -974,11 +1011,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               '${appDocDir.path}/profile_image_$userId.jpg';
 
           try {
-            await FileImage(File(pickedFile.path)).evict();
+            await FileImage(File(finalImagePath)).evict();
             await FileImage(File(localPath)).evict();
           } catch (_) {}
 
-          final File savedFile = await File(pickedFile.path).copy(localPath);
+          final File savedFile = await File(finalImagePath).copy(localPath);
 
           try {
             await FileImage(savedFile).evict();
@@ -1358,7 +1395,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             borderRadius: BorderRadius.circular(sw * 0.05),
                           ),
                           child: Text(
-                            _isActive ? '• Active' : '• Inactive',
+                            _isActive ? 'â€¢ Active' : 'â€¢ Inactive',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: sw * 0.035,

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'dart:ui';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:truejobs/job_seeker_module/Profile%20Sections/about_us_screen.dart';
 import 'package:truejobs/job_seeker_module/Profile%20Sections/settings_screen.dart';
@@ -69,7 +70,7 @@ class _DrawersScreenState extends State<DrawersScreen> {
         );
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+          MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
           (route) => false,
         );
       }
@@ -427,11 +428,45 @@ class _DrawersScreenState extends State<DrawersScreen> {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
-        maxWidth: 400,
-        maxHeight: 400,
-        imageQuality: 30,
+        maxWidth: 1000,
+        maxHeight: 1000,
+        imageQuality: 100,
       );
       if (pickedFile != null) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        final CroppedFile? croppedFile = await ImageCropper().cropImage(
+          sourcePath: pickedFile.path,
+          uiSettings: [
+            AndroidUiSettings(
+                toolbarTitle: 'Crop Profile Image',
+                toolbarColor: AppColors.primary,
+                toolbarWidgetColor: Colors.white,
+                initAspectRatio: CropAspectRatioPreset.square,
+                lockAspectRatio: false,
+                cropStyle: CropStyle.circle,
+                aspectRatioPresets: [
+                  CropAspectRatioPreset.square,
+                  CropAspectRatioPreset.ratio3x2,
+                  CropAspectRatioPreset.original,
+                  CropAspectRatioPreset.ratio4x3,
+                  CropAspectRatioPreset.ratio16x9
+                ]),
+            IOSUiSettings(
+              title: 'Crop Profile Image',
+              cropStyle: CropStyle.circle,
+              aspectRatioPresets: [
+                CropAspectRatioPreset.square,
+                CropAspectRatioPreset.ratio3x2,
+                CropAspectRatioPreset.original,
+                CropAspectRatioPreset.ratio4x3,
+                CropAspectRatioPreset.ratio16x9
+              ],
+            ),
+          ],
+        );
+        if (croppedFile == null) return;
+        final String finalImagePath = croppedFile.path;
+
         final int? userId = await _getValidUserId();
         if (userId == null) return;
         final prefs = await SharedPreferences.getInstance();
@@ -486,7 +521,7 @@ class _DrawersScreenState extends State<DrawersScreen> {
           resume: resume,
           linkedin: linkedin.isEmpty ? ' ' : linkedin,
           portfolio: portfolio.isEmpty ? ' ' : portfolio,
-          profileImage: File(pickedFile.path),
+          profileImage: File(finalImagePath),
         );
 
         if (response['status'] == 'success' || response['error'] == false) {
@@ -495,11 +530,11 @@ class _DrawersScreenState extends State<DrawersScreen> {
               '${appDocDir.path}/profile_image_$userId.jpg';
 
           try {
-            await FileImage(File(pickedFile.path)).evict();
+            await FileImage(File(finalImagePath)).evict();
             await FileImage(File(localPath)).evict();
           } catch (_) {}
 
-          final File savedFile = await File(pickedFile.path).copy(localPath);
+          final File savedFile = await File(finalImagePath).copy(localPath);
 
           try {
             await FileImage(savedFile).evict();
@@ -871,7 +906,7 @@ class _DrawersScreenState extends State<DrawersScreen> {
         } else if (isLogin) {
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => const UnifiedLoginScreen()),
+            MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
             (route) => false,
           );
         } else if (title == 'My Applications') {
@@ -937,3 +972,4 @@ class _DrawersScreenState extends State<DrawersScreen> {
     );
   }
 }
+

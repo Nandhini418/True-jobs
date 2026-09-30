@@ -87,8 +87,7 @@ class _DashboardHolderState extends State<DashboardHolder> {
           'pincode': data['pincode'] ?? data['pin_code'],
           'address': data['address'] ?? data['company_address'],
           'industry_type': data['industry_type'] ?? data['industry'],
-          'about_company': data['about_company'],
-          'company_size': data['company_size']?.toString(),
+          'about_company': data['company_description'] ?? data['about_company'],
           'founded_year': data['founded_year']?.toString(),
           'company_logo': data['company_logo']
         };

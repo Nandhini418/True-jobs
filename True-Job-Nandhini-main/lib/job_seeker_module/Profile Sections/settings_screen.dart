@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/logout_popup.dart';
 import '../../widgets/deactivate_account_popups.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_condition_screen.dart';
 import 'about_us_screen.dart';
@@ -292,7 +292,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Navigator.pushAndRemoveUntil(
                           context,
                           SmoothPageRoute(
-                            child: const UnifiedLoginScreen(),
+                            child: const RoleSelectionScreen(),
                           ),
                           (route) => false,
                         );
@@ -420,3 +420,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
+

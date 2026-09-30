@@ -18,7 +18,11 @@ class Step1JobDetails extends StatefulWidget {
   final ValueChanged<String?> onWorkLocTypeChanged;
   final List<dynamic> locationTypeOptions;
   final bool isLoadingLocationTypes;
-  final TextEditingController locationController;
+  final List<String> selectedLocations;
+  final List<String> locationOptions;
+  final bool isLoadingLocations;
+  final void Function(String) onAddLocation;
+  final void Function(String) onRemoveLocation;
   final TextEditingController openingsController;
 
   final String? salaryType;
@@ -49,7 +53,11 @@ class Step1JobDetails extends StatefulWidget {
     required this.onWorkLocTypeChanged,
     required this.locationTypeOptions,
     required this.isLoadingLocationTypes,
-    required this.locationController,
+    required this.selectedLocations,
+    required this.locationOptions,
+    required this.isLoadingLocations,
+    required this.onAddLocation,
+    required this.onRemoveLocation,
     required this.openingsController,
     required this.salaryType,
     required this.onSalaryTypeChanged,
@@ -70,6 +78,7 @@ class Step1JobDetails extends StatefulWidget {
 
 class _Step1JobDetailsState extends State<Step1JobDetails> {
   TextEditingController? _perksSearchController;
+  TextEditingController? _locationsSearchController;
 
   void _incrementOpenings() {
     int current = int.tryParse(widget.openingsController.text) ?? 1;
@@ -141,11 +150,8 @@ class _Step1JobDetailsState extends State<Step1JobDetails> {
         
         
         
-        buildTextField(
-          label: 'Location',
-          hintText: 'Enter Location',
-          controller: widget.locationController,
-        ),
+        _buildSearchableLocationsField(),
+        SizedBox(height: 16.h),
 
         // Custom Openings Field
         Row(
@@ -325,6 +331,99 @@ class _Step1JobDetailsState extends State<Step1JobDetails> {
                 backgroundColor: AppColors.primary,
                 deleteIcon: const Icon(Icons.close, size: 16, color: Colors.white),
                 onDeleted: () => widget.onRemovePerk(perk),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r), side: const BorderSide(color: Colors.transparent)),
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSearchableLocationsField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildFieldLabel('Location', isRequired: true),
+        SizedBox(height: 7.h),
+        Autocomplete<String>(
+          optionsBuilder: (TextEditingValue textEditingValue) {
+            if (widget.isLoadingLocations) {
+              return const Iterable<String>.empty();
+            }
+            final available = widget.locationOptions.where(
+              (e) => !widget.selectedLocations.contains(e),
+            );
+            if (textEditingValue.text.isEmpty) {
+              return available;
+            }
+            
+            final query = textEditingValue.text.toLowerCase();
+            return available.where((String option) {
+              return option.toLowerCase().contains(query);
+            }).toList();
+          },
+          onSelected: (String selection) {
+            widget.onAddLocation(selection);
+            Future.delayed(Duration.zero, () {
+              _locationsSearchController?.clear();
+            });
+            FocusManager.instance.primaryFocus?.unfocus();
+          },
+          fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
+            _locationsSearchController = controller;
+            return TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              onEditingComplete: onEditingComplete,
+              decoration: InputDecoration(
+                hintText: widget.isLoadingLocations ? 'Loading locations...' : 'Search locations...',
+                hintStyle: TextStyle(fontFamily: kJobFontFamily, color: AppColors.grey, fontSize: 13.sp),
+                suffixIcon: const Icon(Icons.search, color: AppColors.grey),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: AppColors.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: BorderSide(color: AppColors.primary)),
+                contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                isDense: true,
+              ),
+              style: TextStyle(fontFamily: kJobFontFamily, fontSize: 13.sp, color: Colors.black),
+            );
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: 250.h, maxWidth: MediaQuery.of(context).size.width - 32.w),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (context, index) {
+                      final option = options.elementAt(index);
+                      return ListTile(
+                        title: Text(option, style: TextStyle(fontFamily: kJobFontFamily, fontSize: 13.sp)),
+                        onTap: () => onSelected(option),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        if (widget.selectedLocations.isNotEmpty) SizedBox(height: 10.h),
+        if (widget.selectedLocations.isNotEmpty)
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: widget.selectedLocations.map((loc) {
+              return Chip(
+                label: Text(loc, style: TextStyle(fontFamily: kJobFontFamily, fontSize: 12.sp, color: Colors.white)),
+                backgroundColor: AppColors.primary,
+                deleteIcon: const Icon(Icons.close, size: 16, color: Colors.white),
+                onDeleted: () => widget.onRemoveLocation(loc),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r), side: const BorderSide(color: Colors.transparent)),
               );
             }).toList(),

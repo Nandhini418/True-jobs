@@ -402,16 +402,13 @@ class _NearbyWalkInScreenState extends State<NearbyWalkInScreen> {
                       runSpacing: sw * 0.02,
                       children: List.generate(skills.length, (i) {
                         final skill = skills[i];
-                        final isFirst = i == 0;
                         return Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: sw * 0.03,
                             vertical: sw * 0.01,
                           ),
                           decoration: BoxDecoration(
-                            color: isFirst
-                                ? const Color(0xFF2E62A3)
-                                : const Color(0xFF6C57A3),
+                            color: const Color(0xFF2E62A3),
                             borderRadius: BorderRadius.circular(sw * 0.03),
                           ),
                           child: Text(

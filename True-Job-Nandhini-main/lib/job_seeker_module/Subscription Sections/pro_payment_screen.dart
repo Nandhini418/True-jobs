@@ -20,6 +20,7 @@ class _ProPaymentScreenState extends State<ProPaymentScreen> {
   String _name = '';
   String _mobile = '';
   String _email = '';
+  int _freeViews = 0;
 
   @override
   void initState() {
@@ -79,6 +80,9 @@ class _ProPaymentScreenState extends State<ProPaymentScreen> {
           }).toList();
           _isLoading = false;
         });
+        if (response['wallet'] != null) {
+          _freeViews = int.tryParse(response['wallet']['free_views'].toString()) ?? 0;
+        }
       } else {
         setState(() {
           _isLoading = false;
@@ -610,7 +614,31 @@ class _ProPaymentScreenState extends State<ProPaymentScreen> {
                                     height: sh * 0.055,
                                     child: ElevatedButton(
                                       onPressed: selectedPlan != null
-                                          ? () => _startPayment(selectedPlan)
+                                          ? () {
+                                              if (_freeViews > 0) {
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (BuildContext context) {
+                                                    return AlertDialog(
+                                                      backgroundColor: Colors.white,
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(15),
+                                                      ),
+                                                      title: const Text('Free Views Available', style: TextStyle(fontWeight: FontWeight.bold)),
+                                                      content: Text('You still have $_freeViews free HR contact views left. Please use them before purchasing a plan!'),
+                                                      actions: [
+                                                        TextButton(
+                                                          onPressed: () => Navigator.pop(context),
+                                                          child: const Text('OK', style: TextStyle(color: Color(0xFF1E5AA8), fontWeight: FontWeight.bold)),
+                                                        ),
+                                                      ],
+                                                    );
+                                                  }
+                                                );
+                                              } else {
+                                                _startPayment(selectedPlan);
+                                              }
+                                            }
                                           : null,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: _accentBlue,

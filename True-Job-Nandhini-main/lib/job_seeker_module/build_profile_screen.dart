@@ -4,10 +4,11 @@ import 'package:truejobs/constants/app_colors.dart';
 import 'package:truejobs/widgets/disability_popup.dart';
 import 'package:truejobs/widgets/custom_next_button.dart';
 import 'package:truejobs/job_seeker_module/qualification_screen.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:truejobs/services/api/profile_select_api.dart';
 import 'package:truejobs/services/api/gender_api.dart';
 import 'package:truejobs/services/api/physically_challenged_api.dart';
@@ -93,7 +94,7 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
           );
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+            MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
                 (route) => false,
           );
         }
@@ -250,11 +251,49 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(source: source);
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 1000,
+        maxHeight: 1000,
+        imageQuality: 100,
+      );
       if (pickedFile != null) {
-        setState(() {
-          _profileImage = File(pickedFile.path);
-        });
+        await Future.delayed(const Duration(milliseconds: 500));
+        final CroppedFile? croppedFile = await ImageCropper().cropImage(
+          sourcePath: pickedFile.path,
+          uiSettings: [
+            AndroidUiSettings(
+                toolbarTitle: 'Crop Profile Image',
+                toolbarColor: AppColors.primary,
+                toolbarWidgetColor: Colors.white,
+                initAspectRatio: CropAspectRatioPreset.square,
+                lockAspectRatio: false,
+                cropStyle: CropStyle.circle,
+                aspectRatioPresets: [
+                  CropAspectRatioPreset.square,
+                  CropAspectRatioPreset.ratio3x2,
+                  CropAspectRatioPreset.original,
+                  CropAspectRatioPreset.ratio4x3,
+                  CropAspectRatioPreset.ratio16x9
+                ]),
+            IOSUiSettings(
+              title: 'Crop Profile Image',
+              cropStyle: CropStyle.circle,
+              aspectRatioPresets: [
+                CropAspectRatioPreset.square,
+                CropAspectRatioPreset.ratio3x2,
+                CropAspectRatioPreset.original,
+                CropAspectRatioPreset.ratio4x3,
+                CropAspectRatioPreset.ratio16x9
+              ],
+            ),
+          ],
+        );
+        if (croppedFile != null) {
+          setState(() {
+            _profileImage = File(croppedFile.path);
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -329,7 +368,7 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
           );
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+            MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
                 (route) => false,
           );
         }
@@ -596,7 +635,7 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
             if (!context.mounted) return;
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+              MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
               (route) => false,
             );
           },

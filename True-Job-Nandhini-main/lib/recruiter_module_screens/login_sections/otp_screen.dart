@@ -32,7 +32,6 @@ class OtpScreen extends StatefulWidget {
 }
 
 class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
-  static const String _fontFamily = 'Poppins';
   static const int _otpLength = 6;
   static const int _resendSeconds = 29;
 
@@ -94,12 +93,6 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
         });
       }
     });
-  }
-
-  String get _formattedTimer {
-    final minutes = (_secondsRemaining ~/ 60).toString().padLeft(2, '0');
-    final seconds = (_secondsRemaining % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 
   void _checkOtpComplete() {
@@ -268,207 +261,224 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
   @override
   Widget build(BuildContext context) {
     final Color bgColor = AppColors.dynamicBg;
-    final Color textColor = AppColors.dynamicText;
-    final Color subtitleColor = AppColors.dynamicSubtitle;
-    final Color borderColor = AppColors.dynamicBorder;
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: 18.w,
-            vertical: 34.h,
+      resizeToAvoidBottomInset: false,
+      appBar: AppBar(
+        backgroundColor: bgColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+            size: 20.sp,
           ),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 10.h),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              InkWell(
-                onTap: () => Navigator.of(context).maybePop(),
-                child: Icon(
-                  Icons.arrow_back_ios_new,
-                  size: 18.w,
-                  color: textColor,
-                ),
-              ),
-              SizedBox(height: 103.h),
-              _buildSentToLine(textColor, subtitleColor),
-              SizedBox(height: 21.h),
+              SizedBox(height: 20.h),
+
+              // Enter OTP Title
               Text(
                 'Enter OTP',
                 style: TextStyle(
-                  fontFamily: _fontFamily,
-                  fontSize: 14.sp,
+                  fontFamily: 'Poppins',
+                  fontSize: 18.sp,
                   fontWeight: FontWeight.w600,
-                  color: textColor,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8.h),
+
+              // Subtitle
+              Text(
+                "We've sent an OTP to ${widget.phone}",
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14.sp,
+                  color: Color(0x551B1B1B),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              
+              SizedBox(height: 16.h),
+              
+              // Change Button
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Change',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14.sp,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(width: 4.w),
+                    Icon(
+                      Icons.edit,
+                      color: AppColors.primary,
+                      size: 14.sp,
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: 14.h),
-              _buildOtpBoxes(textColor, borderColor),
-              SizedBox(height: 14.h),
-              _buildResendRow(subtitleColor),
-              SizedBox(height: 80.h),
-              _buildVerifyButton(),
-              SizedBox(height: 21.h),
+
+              SizedBox(height: 40.h),
+
+              // OTP Input Fields
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(_otpLength, (index) {
+                  return SizedBox(
+                    width: 45.w,
+                    height: 45.w,
+                    child: TextField(
+                      controller: _otpControllers[index],
+                      focusNode: _otpFocusNodes[index],
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      maxLength: 1,
+                      enableSuggestions: false,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black,
+                      ),
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: InputDecoration(
+                        counterText: '',
+                        contentPadding: EdgeInsets.zero,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                          borderSide: BorderSide(color: Color(0x66B4B4B4)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                          borderSide: const BorderSide(color: AppColors.primary),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        if (value.isEmpty) {
+                          if (_prevValues[index] == ' ') {
+                            _otpControllers[index].text = ' ';
+                            _prevValues[index] = ' ';
+                            if (index > 0) {
+                              _otpFocusNodes[index - 1].requestFocus();
+                              _otpControllers[index - 1].text = ' ';
+                              _prevValues[index - 1] = ' ';
+                            }
+                          } else {
+                            _otpControllers[index].text = ' ';
+                            _prevValues[index] = ' ';
+                          }
+                        } else {
+                          final digit = value.substring(value.length - 1);
+                          _otpControllers[index].text = digit;
+                          _prevValues[index] = digit;
+                          if (index < _otpLength - 1) {
+                            _otpFocusNodes[index + 1].requestFocus();
+                          } else {
+                            _otpFocusNodes[index].unfocus();
+                          }
+                        }
+                        _checkOtpComplete();
+                      },
+                    ),
+                  );
+                }),
+              ),
+
+              SizedBox(height: 32.h),
+
+              // Resend OTP
+              Column(
+                children: [
+                  Text(
+                    "Didn't receive the OTP?",
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14.sp,
+                      color: Color(0x551B1B1B),
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  GestureDetector(
+                    onTap: _secondsRemaining == 0 ? _onResendPressed : null,
+                    child: Text(
+                      _secondsRemaining > 0
+                          ? 'Retry in 00:${_secondsRemaining.toString().padLeft(2, '0')}'
+                          : 'Retry Now',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14.sp,
+                        color: _secondsRemaining > 0
+                            ? Colors.grey[400]
+                            : AppColors.primary,
+                        fontWeight: _secondsRemaining > 0
+                            ? FontWeight.normal
+                            : FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const Spacer(),
+
+              // Verify Button
+              ElevatedButton(
+                onPressed: (_isOtpComplete && !_isLoading) ? _onVerifyPressed : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
+                  foregroundColor: Colors.white,
+                  disabledForegroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 50.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25.r),
+                  ),
+                  elevation: 0,
+                ),
+                child: _isLoading 
+                    ? SizedBox(
+                        height: 20.w, 
+                        width: 20.w, 
+                        child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                      )
+                    : Text(
+                        'Login',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+              SizedBox(height: 40.h),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSentToLine(
-    Color textColor,
-    Color subtitleColor,
-  ) {
-    return RichText(
-      text: TextSpan(
-        style: TextStyle(
-          fontFamily: _fontFamily,
-          fontSize: 12.sp,
-          color: subtitleColor,
-        ),
-        children: [
-          const TextSpan(text: 'A 6-digit code was sent to '),
-          TextSpan(
-            text: widget.phone,
-            style: TextStyle(
-              color: textColor, // Different color for mobile number
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-              },
-              child: Padding(
-                padding: EdgeInsets.only(left: 5.w, right: 5.w, top: 5.h, bottom: 5.h),
-                child: Icon(
-                  Icons.edit,
-                  size: 14.w,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOtpBoxes(
-    Color textColor,
-    Color borderColor,
-  ) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(_otpLength, (index) {
-        return SizedBox(
-          width: 43.w,
-          height: 43.w,
-          child: TextField(
-            controller: _otpControllers[index],
-            focusNode: _otpFocusNodes[index],
-            textAlign: TextAlign.center,
-            keyboardType: TextInputType.number,
-            maxLength: 1,
-            enableSuggestions: false,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: TextStyle(
-              fontFamily: _fontFamily,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w400,
-              color: textColor,
-            ),
-            decoration: InputDecoration(
-              counterText: '',
-              contentPadding: EdgeInsets.zero,
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.r),
-                borderSide: BorderSide(color: borderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.r),
-                borderSide: const BorderSide(
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-              onChanged: (value) {
-                if (value.isEmpty) {
-                  if (_prevValues[index] == ' ') {
-                    _otpControllers[index].text = ' ';
-                    _prevValues[index] = ' ';
-                    if (index > 0) {
-                      _otpFocusNodes[index - 1].requestFocus();
-                      _otpControllers[index - 1].text = ' ';
-                      _prevValues[index - 1] = ' ';
-                    }
-                  } else {
-                    _otpControllers[index].text = ' ';
-                    _prevValues[index] = ' ';
-                  }
-                } else {
-                  final digit = value.substring(value.length - 1);
-                  _otpControllers[index].text = digit;
-                  _prevValues[index] = digit;
-                  if (index < _otpLength - 1) {
-                    _otpFocusNodes[index + 1].requestFocus();
-                  } else {
-                    _otpFocusNodes[index].unfocus();
-                  }
-                }
-                _checkOtpComplete();
-              },
-            ),
-          );
-      }),
-    );
-  }
-
-  Widget _buildResendRow(Color subtitleColor) {
-    return GestureDetector(
-      onTap: _onResendPressed,
-      child: Text(
-        'Resend OTP $_formattedTimer',
-        style: TextStyle(
-          fontFamily: _fontFamily,
-          fontSize: 12.sp,
-          color: _secondsRemaining == 0 ? AppColors.primary : subtitleColor,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVerifyButton() {
-    return ElevatedButton(
-      onPressed: (_isOtpComplete && !_isLoading) ? _onVerifyPressed : null,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        disabledBackgroundColor: Colors.grey[300],
-        foregroundColor: Colors.white,
-        disabledForegroundColor: Colors.white,
-        minimumSize: Size(double.infinity, 52.h),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30.r),
-        ),
-        elevation: 0,
-      ),
-      child: _isLoading 
-          ? SizedBox(
-              height: 18.w, 
-              width: 18.w, 
-              child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-            )
-          : Text(
-              'Verify',
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
     );
   }
 }

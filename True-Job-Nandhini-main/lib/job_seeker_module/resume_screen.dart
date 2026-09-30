@@ -1,6 +1,6 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:truejobs/constants/app_colors.dart';
 import 'package:truejobs/widgets/custom_save_button.dart';
@@ -65,7 +65,7 @@ class _ResumeScreenState extends State<ResumeScreen> {
         );
         Navigator.pushAndRemoveUntil(
           context,
-          SmoothPageRoute(child: const UnifiedLoginScreen()),
+          SmoothPageRoute(child: const RoleSelectionScreen()),
               (route) => false,
         );
       }

@@ -26,6 +26,9 @@ import 'package:truejobs/services/api/jobs_api.dart';
 import 'package:truejobs/services/api/job_api.dart';
 import 'package:truejobs/constants/date_formatter.dart';
 import 'package:truejobs/services/api/dropdown_cache.dart';
+import 'package:truejobs/services/api/profile_select_api.dart';
+import 'package:truejobs/services/api/apply_job_api.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'package:video_player/video_player.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -65,6 +68,338 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchJobs();
     _fetchBanners();
     DropdownCache.preloadDropdowns();
+    _backgroundSync();
+  }
+
+  Future<void> _backgroundSync() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final int? userId = prefs.getInt('user_id');
+      if (userId == null) return;
+      
+      final String suffix = '_$userId';
+
+      // 1. Session Validation
+      try {
+        final profileRes = await ProfileSelectApi.fetchProfile(userId: userId);
+        if (profileRes['status'] == 'error' || profileRes['error'] == true) {
+          final String msg = (profileRes['message'] ?? '').toString().toLowerCase();
+          // Exclude genuine network/downtime errors to allow offline functionality
+          if (!msg.contains('network error') && !msg.contains('server returned status code')) {
+            // Clear SharedPreferences session data
+            await prefs.remove('user_id');
+            await prefs.remove('user_role');
+            await prefs.remove('token');
+            await prefs.remove('name');
+            await prefs.remove('mobile');
+            await prefs.remove('email');
+            await prefs.remove('profile_image_url');
+            await prefs.remove('profile_pic_path');
+            await prefs.remove('resume');
+            await prefs.remove('linkedin');
+            await prefs.remove('portfolio');
+            await prefs.remove('is_profile_completed');
+            await prefs.remove('profile_creation_step');
+            await prefs.remove('you_have_experience');
+            await prefs.remove('job_title');
+            await prefs.remove('company_name');
+            await prefs.remove('user_${userId}_you_have_experience');
+            await prefs.remove('user_${userId}_job_title');
+            await prefs.remove('user_${userId}_company_name');
+            await prefs.remove('user_${userId}_experience_id');
+            await prefs.remove('experience_id');
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Session expired. Please log in again.')),
+              );
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
+                (route) => false,
+              );
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error validating session on home screen: $e');
+      }
+
+      // 2. Pre-fetch applied jobs
+      try {
+        final response = await ApplyJobApi.fetchAppliedJobs(userId: userId);
+        if (response['status'] == 'success' || response['error'] == false) {
+          final List<dynamic> appliedList = response['data'] ?? [];
+          final List<String> newAppliedIds = [];
+          final List<Map<String, dynamic>> mappedAppliedJobs = [];
+          final List<String> newAppliedData = [];
+
+          for (final app in appliedList) {
+            final String jobIdStr = (app['job_id'] ?? app['job id'] ?? app['job'] ?? app['id'] ?? '').toString();
+            if (jobIdStr.isNotEmpty) {
+              newAppliedIds.add(jobIdStr);
+            }
+            Map<String, dynamic>? jobData;
+            final int? jobId = int.tryParse(jobIdStr);
+            if (jobId != null && JobsApi.preloadedJobs != null) {
+              final match = JobsApi.preloadedJobs!.firstWhere(
+                (j) => j['id']?.toString() == jobIdStr,
+                orElse: () => {},
+              );
+              if (match.isNotEmpty) {
+                jobData = Map<String, dynamic>.from(match);
+              }
+            }
+            if (jobData == null && jobId != null) {
+              try {
+                final detailRes = await JobsApi.fetchJobDetails(jobId: jobId);
+                final parsed = JobsApi.parseJobList(detailRes);
+                if (parsed.isNotEmpty) {
+                  jobData = parsed.first;
+                }
+              } catch (_) {}
+            }
+            if (jobData == null && app is Map) {
+              jobData = Map<String, dynamic>.from(app);
+            }
+
+            if (jobData != null) {
+              final mapped = {
+                'id': jobData['id'] ?? jobIdStr,
+                'title': jobData['job_title'] ?? jobData['title'] ?? '',
+                'company': jobData['company_name'] ?? jobData['company'] ?? '',
+                'location': (jobData['location'] != null && jobData['location'].toString().trim().isNotEmpty)
+                    ? jobData['location'].toString().trim()
+                    : ((jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim().isNotEmpty
+                        ? (jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim()
+                        : 'Coimbatore'),
+                'exp': jobData['experience'] ?? jobData['exp'] ?? '',
+                'salary': (jobData['salary_from'] != null && jobData['salary_from'].toString().isNotEmpty)
+                    ? '₹ ${jobData['salary_from']} - ₹ ${jobData['salary_to'] ?? ''} ${jobData['pay_type'] ?? ''}'
+                    : (jobData['salary'] ?? ''),
+                'desc': jobData['job_description'] ?? jobData['job_desc'] ?? jobData['desc'] ?? '',
+                'time': jobData['dtime'] ?? '',
+                'logoText': (jobData['company_name'] ?? jobData['company'] ?? 'J').toString().trim().isNotEmpty
+                    ? (jobData['company_name'] ?? jobData['company']).toString().trim().substring(0, 1).toUpperCase()
+                    : 'J',
+                'logoBg': Colors.blue.shade50,
+                'logoColor': Colors.blue.shade700,
+                'walkInDate': jobData['walk_start'] ?? jobData['walkInDate'],
+                'walkInTime': jobData['walk_time_end'] ?? jobData['walk_time'] ?? jobData['walkInTime'] ?? '',
+                'walk_address': jobData['walk_address'] ?? jobData['office_address'] ?? '',
+                ...jobData,
+              };
+              mappedAppliedJobs.add(mapped);
+
+              final cleanJob = Map<String, dynamic>.from(mapped);
+              if (cleanJob['logoBg'] is Color) {
+                cleanJob['logoBg'] = (cleanJob['logoBg'] as Color).toARGB32();
+              }
+              if (cleanJob['logoColor'] is Color) {
+                cleanJob['logoColor'] = (cleanJob['logoColor'] as Color).toARGB32();
+              }
+              newAppliedData.add(json.encode(cleanJob));
+            }
+          }
+
+          await prefs.setStringList('applied_job_ids$suffix', newAppliedIds);
+          await prefs.setStringList('applied_jobs_data$suffix', newAppliedData);
+          await prefs.setBool('applied_job_ids_synced$suffix', true);
+          ApplyJobApi.setAppliedJobIds(newAppliedIds);
+          ApplyJobApi.preloadedAppliedJobs = mappedAppliedJobs;
+        }
+      } catch (e) {
+        debugPrint('Error pre-fetching applied jobs on home screen: $e');
+      }
+
+      // 3. Pre-fetch registered walkins
+      try {
+        final walkinResponse = await ApplyJobApi.fetchRegisteredWalkins(userId: userId);
+        if (walkinResponse['status'] == 'success' || walkinResponse['error'] == false) {
+          final List<dynamic> walkinList = walkinResponse['data'] ?? [];
+          final List<String> newWalkinIds = [];
+          final List<Map<String, dynamic>> mappedWalkinJobs = [];
+          final List<String> newWalkinData = [];
+
+          for (final item in walkinList) {
+            final String jobIdStr = (item['job_id'] ?? item['job id'] ?? item['job'] ?? item['id'] ?? '').toString();
+            if (jobIdStr.isNotEmpty) {
+              newWalkinIds.add(jobIdStr);
+            }
+            Map<String, dynamic>? jobData;
+            final int? jobId = int.tryParse(jobIdStr);
+            if (jobId != null && JobsApi.preloadedJobs != null) {
+              final match = JobsApi.preloadedJobs!.firstWhere(
+                (j) => j['id']?.toString() == jobIdStr,
+                orElse: () => {},
+              );
+              if (match.isNotEmpty) {
+                jobData = Map<String, dynamic>.from(match);
+              }
+            }
+            if (jobData == null && jobId != null) {
+              try {
+                final detailRes = await JobsApi.fetchJobDetails(jobId: jobId);
+                final parsed = JobsApi.parseJobList(detailRes);
+                if (parsed.isNotEmpty) {
+                  jobData = parsed.first;
+                }
+              } catch (_) {}
+            }
+            if (jobData == null && item is Map) {
+              jobData = Map<String, dynamic>.from(item);
+            }
+
+            if (jobData != null) {
+              final mapped = {
+                'id': jobData['id'] ?? jobIdStr,
+                'title': jobData['job_title'] ?? jobData['title'] ?? '',
+                'company': jobData['company_name'] ?? jobData['company'] ?? '',
+                'location': (jobData['location'] != null && jobData['location'].toString().trim().isNotEmpty)
+                    ? jobData['location'].toString().trim()
+                    : ((jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim().isNotEmpty
+                        ? (jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim()
+                        : 'Coimbatore'),
+                'exp': jobData['experience'] ?? jobData['exp'] ?? '',
+                'salary': (jobData['salary_from'] != null && jobData['salary_from'].toString().isNotEmpty)
+                    ? '₹ ${jobData['salary_from']} - ₹ ${jobData['salary_to'] ?? ''} ${jobData['pay_type'] ?? ''}'
+                    : (jobData['salary'] ?? ''),
+                'desc': jobData['job_description'] ?? jobData['job_desc'] ?? jobData['desc'] ?? '',
+                'time': jobData['dtime'] ?? '',
+                'logoText': (jobData['company_name'] ?? jobData['company'] ?? 'J').toString().trim().isNotEmpty
+                    ? (jobData['company_name'] ?? jobData['company']).toString().trim().substring(0, 1).toUpperCase()
+                    : 'J',
+                'logoBg': Colors.blue.shade50,
+                'logoColor': Colors.blue.shade700,
+                'walkInDate': jobData['walk_start'] ?? jobData['walkInDate'],
+                'walkInTime': jobData['walk_time_end'] ?? jobData['walk_time'] ?? jobData['walkInTime'] ?? '',
+                'walk_address': jobData['walk_address'] ?? jobData['office_address'] ?? '',
+                ...jobData,
+              };
+              mappedWalkinJobs.add(mapped);
+
+              final cleanJob = Map<String, dynamic>.from(mapped);
+              if (cleanJob['logoBg'] is Color) {
+                cleanJob['logoBg'] = (cleanJob['logoBg'] as Color).toARGB32();
+              }
+              if (cleanJob['logoColor'] is Color) {
+                cleanJob['logoColor'] = (cleanJob['logoColor'] as Color).toARGB32();
+              }
+              newWalkinData.add(json.encode(cleanJob));
+            }
+          }
+
+          await prefs.setStringList('registered_walkin_ids$suffix', newWalkinIds);
+          await prefs.setStringList('registered_walkin_jobs_data$suffix', newWalkinData);
+          await prefs.setBool('registered_walkin_ids_synced$suffix', true);
+          ApplyJobApi.setRegisteredWalkinIds(newWalkinIds);
+          ApplyJobApi.preloadedRegisteredWalkins = mappedWalkinJobs;
+        }
+      } catch (e) {
+        debugPrint('Error pre-fetching walkins on home screen: $e');
+      }
+
+      // 4. Pre-fetch saved jobs
+      try {
+        final String token = prefs.getString('token') ?? '';
+        if (token.isNotEmpty) {
+          final savedResponse = await JobApi.fetchSavedJobs(userId: userId, token: token);
+          if (savedResponse['error'] == false) {
+            final List<dynamic> savedList = savedResponse['data'] ?? [];
+            final List<String> newSavedIds = [];
+            final List<String> newSavedData = [];
+
+            for (final item in savedList) {
+              final String jobIdStr = (item['job_id'] ?? item['job id'] ?? item['job'] ?? item['id'] ?? '').toString();
+              if (jobIdStr.isNotEmpty) {
+                newSavedIds.add(jobIdStr);
+              }
+              Map<String, dynamic>? jobData;
+              final int? jobId = int.tryParse(jobIdStr);
+              
+              if (jobId != null && JobsApi.preloadedJobs != null) {
+                final match = JobsApi.preloadedJobs!.firstWhere(
+                  (j) => j['id']?.toString() == jobIdStr,
+                  orElse: () => {},
+                );
+                if (match.isNotEmpty) {
+                  jobData = Map<String, dynamic>.from(match);
+                }
+              }
+              
+              if (jobData == null && item['job_details'] is Map) {
+                 jobData = Map<String, dynamic>.from(item['job_details']);
+                 jobData['id'] = jobIdStr;
+                 jobData['company'] = jobData['company_name'] ?? '';
+                 jobData['title'] = jobData['job_title'] ?? '';
+                 jobData['exp'] = jobData['experience'] ?? '';
+                 if (jobData['salary_range'] != null) {
+                   jobData['salary'] = '₹ ${jobData['salary_range']} Monthly';
+                 }
+              }
+              
+              if (jobData == null && jobId != null) {
+                try {
+                  final detailRes = await JobsApi.fetchJobDetails(jobId: jobId);
+                  final parsed = JobsApi.parseJobList(detailRes);
+                  if (parsed.isNotEmpty) {
+                    jobData = parsed.first;
+                  }
+                } catch (_) {}
+              }
+
+              if (jobData != null) {
+                final mapped = {
+                  'id': jobData['id'] ?? jobIdStr,
+                  'title': jobData['job_title'] ?? jobData['title'] ?? '',
+                  'company': jobData['company_name'] ?? jobData['company'] ?? '',
+                  'location': (jobData['location'] != null && jobData['location'].toString().trim().isNotEmpty)
+                      ? jobData['location'].toString().trim()
+                      : ((jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim().isNotEmpty
+                          ? (jobData['job_city'] ?? jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? 'Coimbatore').toString().trim()
+                          : 'Coimbatore'),
+                  'exp': jobData['experience'] ?? jobData['exp'] ?? '',
+                  'salary': (jobData['salary_from'] != null && jobData['salary_from'].toString().isNotEmpty)
+                      ? '₹ ${jobData['salary_from']} - ₹ ${jobData['salary_to'] ?? ''} ${jobData['pay_type'] ?? ''}'
+                      : (jobData['salary'] ?? ''),
+                  'desc': jobData['job_description'] ?? jobData['job_desc'] ?? jobData['desc'] ?? '',
+                  'time': jobData['dtime'] ?? '',
+                  'logoText': (jobData['company_name'] ?? jobData['company'] ?? 'J').toString().trim().isNotEmpty
+                      ? (jobData['company_name'] ?? jobData['company']).toString().trim().substring(0, 1).toUpperCase()
+                      : 'J',
+                  'logoBg': Colors.blue.shade50,
+                  'logoColor': Colors.blue.shade700,
+                  'walkInDate': jobData['walk_start'] ?? jobData['walkInDate'],
+                  'walkInTime': jobData['walk_time_end'] ?? jobData['walk_time'] ?? jobData['walkInTime'] ?? '',
+                  'walk_address': jobData['walk_address'] ?? jobData['office_address'] ?? '',
+                  ...jobData,
+                };
+
+                final cleanJob = Map<String, dynamic>.from(mapped);
+                if (cleanJob['logoBg'] is Color) {
+                  cleanJob['logoBg'] = (cleanJob['logoBg'] as Color).toARGB32();
+                }
+                if (cleanJob['logoColor'] is Color) {
+                  cleanJob['logoColor'] = (cleanJob['logoColor'] as Color).toARGB32();
+                }
+                newSavedData.add(json.encode(cleanJob));
+              }
+            }
+
+            await prefs.setStringList('saved_job_ids$suffix', newSavedIds);
+            await prefs.setStringList('saved_jobs_data$suffix', newSavedData);
+            if (mounted) {
+              _loadSavedJobIds();
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error pre-fetching saved jobs on home screen: $e');
+      }
+
+    } catch (e) {
+      debugPrint('Error in _backgroundSync: $e');
+    }
   }
 
   Future<String> _getUserSuffix() async {
@@ -1415,6 +1750,10 @@ class _HomeScreenState extends State<HomeScreen> {
             .toString();
         final String company =
             (job['company'] ?? job['company_name'] ?? 'Company').toString();
+        
+        final String logoText = job['logoText'] ?? (company.isNotEmpty ? company[0].toUpperCase() : 'W');
+        final Color logoBg = job['logoBg'] is Color ? job['logoBg'] : Colors.blue.shade50;
+        final Color logoColor = job['logoColor'] is Color ? job['logoColor'] : Colors.blue.shade700;
         final String location =
             (job['location'] != null &&
                 job['location'].toString().trim().isNotEmpty)
@@ -1479,17 +1818,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            backgroundColor: Colors.blue.shade50,
-                            child: Text(
-                              company.isNotEmpty
-                                  ? company[0].toUpperCase()
-                                  : 'W',
-                              style: TextStyle(
-                                color: Colors.blue.shade700,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                          CompanyLogoWidget(
+                            companyId: job['recuriter_name']?.toString() ?? '',
+                            fallbackText: logoText,
+                            fallbackBgColor: logoBg,
+                            fallbackTextColor: logoColor,
+                            radius: 0.05.sw,
                           ),
                           SizedBox(width: 0.03.sw),
                           Expanded(

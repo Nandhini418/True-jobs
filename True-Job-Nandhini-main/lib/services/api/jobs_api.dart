@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'api_config.dart';
 import 'skills_select_api.dart';
-
+import 'location_dropdown_api.dart';
 class JobsApi {
   static List<Map<String, dynamic>>? preloadedJobs;
   static Map<String, String>? _skillsCache;
+  static Map<String, String>? _locationCache;
 
-  /// Ensure master skills list is loaded into memory cache
+  /// Ensure master skills and locations list is loaded into memory cache
   static Future<void> _ensureSkillsLoaded() async {
-    if (_skillsCache != null) return;
+    if (_skillsCache != null && _locationCache != null) return;
     try {
       final res = await SkillsSelectApi.fetchSkills();
       if (res['status'] == 'success' || res['error'] == false) {
@@ -27,6 +28,24 @@ class JobsApi {
             }
           }
           _skillsCache = cache;
+        }
+      }
+
+      final locRes = await LocationDropdownApi.fetchLocations();
+      if (locRes['status'] == 'success' || locRes['error'] == false) {
+        final List<dynamic>? locList = (locRes['data'] ?? locRes['dropdown']) as List<dynamic>?;
+        if (locList != null) {
+          final Map<String, String> cache = {};
+          for (var item in locList) {
+            if (item is Map) {
+              final String? id = (item['value'] ?? item['id'])?.toString();
+              final String? name = (item['label'] ?? item['name'])?.toString();
+              if (id != null && name != null) {
+                cache[id] = name;
+              }
+            }
+          }
+          _locationCache = cache;
         }
       }
     } catch (e) {
@@ -57,16 +76,41 @@ class JobsApi {
         final String rawArea = (jobData['job_area'] ?? jobData['walk_address'] ?? jobData['office_address'] ?? '').toString().trim();
         
         String locationStr = '';
-        if (rawLoc.isNotEmpty) {
-          locationStr = rawLoc;
-        } else if (rawArea.isNotEmpty && rawCity.isNotEmpty) {
-          locationStr = '$rawArea, $rawCity';
-        } else if (rawCity.isNotEmpty) {
-          locationStr = rawCity;
-        } else if (rawArea.isNotEmpty) {
-          locationStr = rawArea;
-        } else {
-          locationStr = 'Coimbatore';
+        
+        // Use the API's provided location_name if available
+        final rawLocationName = jobData['location_name'];
+        if (rawLocationName is List && rawLocationName.isNotEmpty) {
+          locationStr = rawLocationName.join(', ');
+        } else if (rawLocationName is String && rawLocationName.trim().isNotEmpty) {
+          locationStr = rawLocationName.trim();
+        }
+
+        // Fallback to our cache if location_name is missing
+        if (locationStr.isEmpty && rawLoc.isNotEmpty && _locationCache != null) {
+          final parts = rawLoc.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty);
+          final List<String> resolvedLocs = [];
+          for (var p in parts) {
+            if (_locationCache!.containsKey(p)) {
+              resolvedLocs.add(_locationCache![p]!);
+            }
+          }
+          if (resolvedLocs.isNotEmpty) {
+            locationStr = resolvedLocs.join(', ');
+          }
+        }
+
+        if (locationStr.isEmpty) {
+          if (rawLoc.isNotEmpty && !RegExp(r'^\d+$').hasMatch(rawLoc)) {
+            locationStr = rawLoc;
+          } else if (rawArea.isNotEmpty && rawCity.isNotEmpty) {
+            locationStr = '$rawArea, $rawCity';
+          } else if (rawCity.isNotEmpty) {
+            locationStr = rawCity;
+          } else if (rawArea.isNotEmpty) {
+            locationStr = rawArea;
+          } else {
+            locationStr = 'Coimbatore';
+          }
         }
 
         final rawFrom = jobData['salary_from'];

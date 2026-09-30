@@ -1,6 +1,6 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truejobs/job_seeker_module/Profile%20Sections/add_education_screen.dart';
 import '../../constants/app_colors.dart';
@@ -100,7 +100,7 @@ class _QualificationsDetailScreenState
         );
         Navigator.pushAndRemoveUntil(
           context,
-          SmoothPageRoute(child: const UnifiedLoginScreen()),
+          SmoothPageRoute(child: const RoleSelectionScreen()),
           (route) => false,
         );
       }
@@ -945,7 +945,7 @@ class _QualificationsDetailScreenState
     return 23;
   }
 
-  // ── Navigate to AddEducationScreen and handle result ──────────────────────
+  // â”€â”€ Navigate to AddEducationScreen and handle result â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Future<void> _openAddEducation({
     EducationEntry? existing,
     int? editIndex,
@@ -1406,7 +1406,7 @@ class _QualificationsDetailScreenState
                                 ),
                               ),
 
-                              // ── Saved education entry cards ──────────────
+                              // â”€â”€ Saved education entry cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                               if (_educationEntries.isNotEmpty) ...[
                                 SizedBox(height: sw * 0.04),
                                 ..._educationEntries.asMap().entries.map(
@@ -1949,7 +1949,7 @@ class _QualificationsDetailScreenState
     );
   }
 
-  // ── Education Entry Card ───────────────────────────────────────────────────
+  // â”€â”€ Education Entry Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Widget _buildEducationEntryCard(
     EducationEntry entry,
     int index,
@@ -2643,7 +2643,7 @@ class _QualificationsDetailScreenState
           sw,
           bodyFontSize,
           'Duration',
-          [formattedStart, formattedEnd].where((s) => s.isNotEmpty).join('  –  '),
+          [formattedStart, formattedEnd].where((s) => s.isNotEmpty).join('  â€“  '),
         ),
       );
     }
@@ -2717,7 +2717,7 @@ class _QualificationsDetailScreenState
           sw,
           bodyFontSize,
           'Duration',
-          [formattedStart, formattedEnd].where((s) => s.isNotEmpty).join('  –  '),
+          [formattedStart, formattedEnd].where((s) => s.isNotEmpty).join('  â€“  '),
         ),
       );
     }
@@ -2781,3 +2781,4 @@ class _QualificationsDetailScreenState
     );
   }
 }
+

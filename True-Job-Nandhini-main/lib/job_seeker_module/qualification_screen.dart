@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:truejobs/constants/app_colors.dart';
 import 'package:truejobs/widgets/custom_next_button.dart';
 import 'package:truejobs/widgets/qualification_sheets.dart';
@@ -6,7 +6,7 @@ import 'package:truejobs/job_seeker_module/experience_screen.dart';
 import 'package:truejobs/services/api/qualification_cat_api.dart';
 import 'package:truejobs/services/api/educational_insert_api.dart';
 import 'package:truejobs/services/api/educational_select_api.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/smooth_page_route.dart';
 
@@ -50,7 +50,7 @@ class _QualificationScreenState extends State<QualificationScreen> {
         );
         Navigator.pushAndRemoveUntil(
           context,
-          SmoothPageRoute(child: const UnifiedLoginScreen()),
+          SmoothPageRoute(child: const RoleSelectionScreen()),
               (route) => false,
         );
       }

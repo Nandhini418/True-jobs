@@ -1,9 +1,9 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -152,7 +152,7 @@ class _ResumeSelectionScreenState extends State<ResumeSelectionScreen> {
         );
         Navigator.pushAndRemoveUntil(
           context,
-          SmoothPageRoute(child: const UnifiedLoginScreen()),
+          SmoothPageRoute(child: const RoleSelectionScreen()),
           (route) => false,
         );
       }
@@ -963,7 +963,7 @@ class _ResumeSelectionScreenState extends State<ResumeSelectionScreen> {
                                 ),
                                 SizedBox(height: sw * 0.008),
                                 Text(
-                                  '$company  •  $location',
+                                  '$company  â€¢  $location',
                                   style: TextStyle(
                                     fontSize: sw * 0.034,
                                     color: subtitleColor,
@@ -1088,7 +1088,7 @@ class _ResumeSelectionScreenState extends State<ResumeSelectionScreen> {
                                               ),
                                               SizedBox(height: sw * 0.01),
                                               Text(
-                                                '${resume['modified']}  •  ${resume['size']}',
+                                                '${resume['modified']}  â€¢  ${resume['size']}',
                                                 style: TextStyle(
                                                   fontSize: sw * 0.032,
                                                   color: subtitleColor,
@@ -1439,3 +1439,4 @@ class IndianCurrencyInputFormatter extends TextInputFormatter {
     return '$reversedRemaining,$lastThree';
   }
 }
+

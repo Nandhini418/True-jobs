@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:truejobs/constants/app_colors.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 
 class WalkthroughScreen extends StatelessWidget {
   const WalkthroughScreen({super.key});
@@ -63,7 +63,7 @@ class WalkthroughScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+                        MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -150,3 +150,4 @@ class _FeatureItem extends StatelessWidget {
     );
   }
 }
+

@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truejobs/constants/app_colors.dart';
-import 'package:truejobs/common_screens/unified_login_screen.dart';
+import 'package:truejobs/common_screens/role_selection_screen.dart';
 
 class GuestPopup extends StatelessWidget {
   const GuestPopup({super.key});
@@ -84,7 +84,7 @@ class GuestPopup extends StatelessWidget {
                     Navigator.pop(context); // Close dialog
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (_) => const UnifiedLoginScreen()),
+                      MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
                       (route) => false,
                     );
                   },
@@ -173,3 +173,4 @@ Future<bool> checkAndShowGuestPopup(BuildContext context) async {
   }
   return false;
 }
+

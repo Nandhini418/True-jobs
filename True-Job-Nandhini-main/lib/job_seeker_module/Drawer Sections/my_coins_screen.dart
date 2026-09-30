@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api/wallet_api.dart';
+import '../../services/api/subscription_plan_api.dart';
+import '../Subscription Sections/pro_payment_screen.dart';
 
 class MyCoinsScreen extends StatefulWidget {
   const MyCoinsScreen({Key? key}) : super(key: key);
@@ -16,6 +18,7 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
   int _purchasedCoins = 0;
   int _spentCoins = 0;
   int _remainingCoins = 0;
+  int _freeViews = 0;
 
   @override
   void initState() {
@@ -29,13 +32,26 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
       final userId = prefs.getInt('user_id') ?? 1; // Default to 1 if not found
 
       final res = await WalletApi.fetchWallet(userId: userId);
+      final planRes = await SubscriptionPlanApi.fetchPlans();
+      
       if (res['error'] == false && res['data'] != null && res['data'].isNotEmpty) {
         final data = res['data'][0];
+        
+        int fViews = 0;
+        if (planRes['wallet'] != null) {
+          fViews = int.tryParse(planRes['wallet']['free_views']?.toString() ?? '0') ?? 0;
+        } else if (res['wallet'] != null) {
+          fViews = int.tryParse(res['wallet']['free_views']?.toString() ?? '0') ?? 0;
+        } else {
+          fViews = int.tryParse(data['free_views']?.toString() ?? '0') ?? 0;
+        }
+
         setState(() {
           _coinBalance = data['balance_coins'] ?? 0;
           _purchasedCoins = data['total_purchase_coins'] ?? 0;
           _spentCoins = data['total_spent_coins'] ?? 0;
           _remainingCoins = data['balance_coins'] ?? 0; // Using balance_coins for remaining
+          _freeViews = fViews;
           _isLoading = false;
         });
       } else {
@@ -136,23 +152,33 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Row(
-                      children: const [
-                        Text(
-                          'View plan',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProPaymentScreen(),
                           ),
-                        ),
-                        SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          color: Colors.white,
-                          size: 14,
-                        ),
-                      ],
+                        );
+                      },
+                      child: Row(
+                        children: const [
+                          Text(
+                            'View plan',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -208,6 +234,8 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
                 _buildStatColumn('Spent', '$_spentCoins'),
                 _buildVerticalDivider(),
                 _buildStatColumn('Remaining', '$_remainingCoins'),
+                _buildVerticalDivider(),
+                _buildStatColumn('Free Views', '$_freeViews'),
               ],
             ),
           ),
@@ -326,7 +354,12 @@ class _MyCoinsScreenState extends State<MyCoinsScreen> {
             ),
             child: ElevatedButton(
               onPressed: () {
-                // Handle Buy Coins
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProPaymentScreen(),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB), // Blue button

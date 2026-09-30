@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api_config.dart';
 
 class SubscriptionPlanApi {
@@ -9,6 +10,25 @@ class SubscriptionPlanApi {
 
     final Map<String, String> body = await ApiConfig.getCommonParams();
     body['type'] = '1152';
+
+    final prefs = await SharedPreferences.getInstance();
+    int? userId = prefs.getInt('user_id');
+    if (userId == null) {
+      final String? userIdStr = prefs.getString('user_id');
+      if (userIdStr != null) {
+        userId = int.tryParse(userIdStr);
+      }
+    }
+    if (userId == null) {
+      final String? cidStr = prefs.getString('cid');
+      if (cidStr != null) {
+        userId = int.tryParse(cidStr);
+      }
+    }
+
+    if (userId != null) {
+      body['user_id'] = userId.toString();
+    }
 
     debugPrint('--> POST $url (fetchSubscriptionPlans)');
     debugPrint('Body: $body');

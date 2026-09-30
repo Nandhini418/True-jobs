@@ -15,6 +15,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:truejobs/services/notification_service.dart';
 import '../../services/api/apply_job_api.dart';
 import '../../utils/smooth_page_route.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phoneNumber;
@@ -484,12 +485,9 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
     final double screenWidth = screenSize.width;
-    final double screenHeight = screenSize.height;
 
     final Color bgColor = AppColors.dynamicBg;
     final Color textColor = AppColors.dynamicText;
-    final Color borderColor = AppColors.dynamicBorder;
-    final Color subtitleColor = AppColors.dynamicSubtitle;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -512,67 +510,73 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
       ),
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(screenWidth * 0.05),
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 30.h),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(height: screenHeight * 0.08),
-
-              Row(
-                children: [
-                  Text(
-                    'A 6-digit code was sent to ',
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.035,
-                      color: subtitleColor,
-                    ),
-                  ),
-                  Text(
-                    widget.phoneNumber,
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.035,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                  ),
-                  SizedBox(width: screenWidth * 0.01),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                    child: Padding(
-                      padding: EdgeInsets.all(screenWidth * 0.02),
-                      child: Icon(
-                        Icons.edit,
-                        color: AppColors.primary,
-                        size: screenWidth * 0.04,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              SizedBox(height: screenHeight * 0.02),
 
               // Enter OTP Title
               Text(
                 'Enter OTP',
                 style: TextStyle(
-                  fontSize: screenWidth * 0.045,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+                  fontFamily: 'Poppins',
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 5.h),
+
+              // Subtitle
+              Text(
+                "We've sent an OTP to ${widget.phoneNumber}",
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14.sp,
+                  color: Color(0x551B1B1B),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              
+              SizedBox(height: 20.h),
+              
+              // Change Button
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Change',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14.sp,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(width: 4.w),
+                    Icon(
+                      Icons.edit,
+                      color: AppColors.primary,
+                      size: 14.sp,
+                    ),
+                  ],
                 ),
               ),
 
-              SizedBox(height: screenHeight * 0.03),
+              SizedBox(height: 40.h),
 
               // OTP Input Fields
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (index) {
                   return SizedBox(
-                    width: screenWidth * 0.12,
-                    height: screenWidth * 0.12,
+                    width: 45.w,
+                    height: 45.w,
                     child: TextField(
                       controller: _controllers[index],
                       focusNode: _focusNodes[index],
@@ -580,24 +584,23 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
                       textAlign: TextAlign.center,
                       maxLength: 1,
                       enableSuggestions: false,
-                      style: TextStyle(color: textColor),
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black,
+                      ),
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
                         counterText: '',
                         contentPadding: EdgeInsets.zero,
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            screenWidth * 0.02,
-                          ),
-                          borderSide: BorderSide(color: borderColor),
+                          borderRadius: BorderRadius.circular(8.r),
+                          borderSide: BorderSide(color: Color(0x66B4B4B4)),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            screenWidth * 0.02,
-                          ),
-                          borderSide: const BorderSide(
-                            color: AppColors.primary,
-                          ),
+                          borderRadius: BorderRadius.circular(8.r),
+                          borderSide: const BorderSide(color: AppColors.primary),
                         ),
                       ),
                       onChanged: (value) {
@@ -631,25 +634,39 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
                 }),
               ),
 
-              SizedBox(height: screenHeight * 0.03),
+              SizedBox(height: 30.h),
 
               // Resend OTP
-              GestureDetector(
-                onTap: _resendTimer == 0 ? _resendOtp : null,
-                child: Text(
-                  _resendTimer > 0
-                      ? 'Resend OTP 00:${_resendTimer.toString().padLeft(2, '0')}'
-                      : 'Resend OTP',
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.035,
-                    color: _resendTimer > 0
-                        ? subtitleColor
-                        : AppColors.primary,
-                    fontWeight: _resendTimer > 0
-                        ? FontWeight.normal
-                        : FontWeight.bold,
+              Column(
+                children: [
+                  Text(
+                    "Didn't receive the OTP?",
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14.sp,
+                      color: Color(0x551B1B1B),
+                    ),
                   ),
-                ),
+                  SizedBox(height: 4.h),
+                  GestureDetector(
+                    onTap: _resendTimer == 0 ? _resendOtp : null,
+                    child: Text(
+                      _resendTimer > 0
+                          ? 'Retry in 00:${_resendTimer.toString().padLeft(2, '0')}'
+                          : 'Retry Now',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14.sp,
+                        color: _resendTimer > 0
+                            ? Color(0xFF1B1B1B)
+                            : AppColors.primary,
+                        fontWeight: _resendTimer > 0
+                            ? FontWeight.normal
+                            : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
               const Spacer(),
@@ -659,24 +676,25 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
                 onPressed: _isOtpComplete ? _verifyOtp : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                   disabledBackgroundColor: Colors.grey[300],
+                   disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
                   foregroundColor: Colors.white,
                   disabledForegroundColor: Colors.white,
-                  minimumSize: Size(double.infinity, screenHeight * 0.065),
+                  minimumSize: Size(double.infinity, 50.h),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(screenWidth * 0.08),
+                    borderRadius: BorderRadius.circular(25.r),
                   ),
                   elevation: 0,
                 ),
                 child: Text(
-                  'Verify',
+                  'Login',
                   style: TextStyle(
-                    fontSize: screenWidth * 0.035,
-                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Poppins',
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              SizedBox(height: screenHeight * 0.02),
+              SizedBox(height: 20.h),
             ],
           ),
         ),
